@@ -1,0 +1,94 @@
+---
+title: "BQ Ingestion/Processing Code"
+date: "5/30/2020"
+output: html_document
+---
+<style>
+body { position: absolute; left: 40px; }
+</style>
+
+
+```{r setup, include=FALSE}
+
+library(dplyr)
+library(magrittr)
+library(tibble)
+library(data.table)
+library(jsonlite)
+library(lubridate)
+library(stringr)
+library(dlookr)
+library(flextable)
+library(visdat)
+library(hablar)
+library(ggplot2)
+library(bigrquery)
+library(devtools)
+library(fuzzyjoin)
+library(pryr)
+library(DBI)
+library(dbplyr)
+library(rlang)
+devtools::install_github("jcha-ultra/bqprocessr")
+
+## Set up regex
+
+
+
+
+
+```
+
+This provides a way to individually step through each column of a dataframe and examine its properties.
+
+```{r column_stepping}
+
+
+
+# Settings
+tbl <- f_5500_sf_2018_latest
+
+# cols <- colnames(tbl)[ends_with("_IND", vars=colnames(tbl))]
+# cols <- colnames(tbl)[ends_with("_DATE", vars=colnames(tbl))]
+cols <- colnames(tbl)[ends_with("_AMT", vars=colnames(tbl))]
+# cols_done <- colnames(tbl)[ends_with("_IND", vars=colnames(tbl))]
+# cols <- setdiff(colnames(tbl),cols_done)
+
+
+col_selector <- function (table, col_name) {
+   # table %>% select(sym(col_name))
+   table %>% select(sym(col_name)) %>% as_tibble()
+}
+
+# Step generation function
+step_gen <- function (index=1) {
+   function (.funs) {
+      col_name <- cols[index]
+      cur_col <- tbl %>% col_selector(col_name)
+      for (fun in .funs) {
+         fun(cur_col) %>% print
+      }
+      index <<- index+1;
+   }
+}
+
+# Generate stepping function using step_gen()
+next_step <- step_gen(match("SF_TOT_LIABILITIES_EOY_AMT",cols))
+next_step <- step_gen(1)
+
+# Call the generated function with a list of analytics functions and it will apply the functions to the next column, starting with the column index specified for step_gen
+# next_step(list(function (x) x, diagnose))
+# next_step(list(unique))
+# next_step(list(diagnose,unique))
+next_step(list(function (x) summary(hablar::convert(x, num(1))), diagnose,unique))
+
+# ?hablar::convert(num(1))
+
+```
+
+``` {r analysis_functions}
+
+# Analysis Functions; must be of form fun(df)
+
+
+```
