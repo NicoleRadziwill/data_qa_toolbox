@@ -1,0 +1,70 @@
+---
+title: "Compare Column Names in Two BigQuery Tables"
+date: "6/23/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(jsonlite)
+library(dplyr)
+library(magrittr)
+library(tibble)
+library(bigrquery)
+library(DBI)
+library(readr)
+
+### SET TOKENS
+Sys.setenv("GCS_DEFAULT_BUCKET" = "bluenote-ultranauts-ingress")
+Sys.setenv("GCS_AUTH_FILE" = "D:/GCP/bluenote-ultranauts-************.json")
+
+## AUTHENTICATION
+bq_auth(path=Sys.getenv("GCS_AUTH_FILE"))
+
+## BQ SETUP
+bq_project_name <- "bluenote-ultranauts"
+bq_dataset_name <- "form_5500_raw"
+
+con <- DBI::dbConnect(
+  bigrquery::bigquery(),
+  project = bq_project_name,
+  dataset = bq_dataset_name,
+)
+
+```
+
+
+```{r get-data}
+# ATTN: This is hardcoded and could potentially be converted to a generalized function that takes
+# Project Name (bluenote-ultranauts), Collection Name (form_5500_raw), and table names as inputs
+
+# We want to compare column names between two tables
+sql.1 <- "SELECT column_name FROM `bluenote-ultranauts`.form_5500_raw.INFORMATION_SCHEMA.COLUMNS WHERE table_name = 'f_5500_2018_latest'"
+sql.2 <- "SELECT column_name FROM `bluenote-ultranauts`.form_5500_raw.INFORMATION_SCHEMA.COLUMNS WHERE table_name = 'f_5500_sf_2009_latest'"
+
+x <- dbGetQuery(con, sql.1) # generates a data frame x with one column named column_name
+y <- dbGetQuery(con, sql.2) # generates a data frame y with one column named column_name
+
+
+# Find columns that appear in BOTH x and y
+intersect(x$column_name, y$column_name)
+
+# Find columns that are in x but not in y
+setdiff(x$column_name, y$column_name)
+
+# Find columns that are in y but not in x
+setdiff(y$column_name, x$column_name)
+
+# from https://stackoverflow.com/questions/17598134/compare-two-character-vectors-in-r
+xtab_set <- function(A,B){
+    both    <-  union(A,B)
+    inA     <-  both %in% A
+    inB     <-  both %in% B
+    return(table(inA,inB))
+}
+
+# Examine degree to which two tables are aligned: if all fall in TRUE/TRUE there is a perfect match
+xtab_set(x$column_name, y$column_name)
+
+```
