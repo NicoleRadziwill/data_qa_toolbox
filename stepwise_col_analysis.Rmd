@@ -29,30 +29,39 @@ library(pryr)
 library(DBI)
 library(dbplyr)
 library(rlang)
-devtools::install_github("jcha-ultra/bqprocessr")
+# devtools::install_github("jcha-ultra/bqprocessr")
 
 ## Set up regex
 
+# How to get auth key:
+## GCP => IAM/Admin => Service Accounts => "bluenote-ultra-dev@bluenote-ultranauts.iam.gserviceaccount.com" => Add Key
+bq_auth(path = "TBD")
+bq_project_name <- "TBD"
+bq_dataset_name <- "TBD"
 
-
+# Connection for dplyr
+con <- DBI::dbConnect(
+  bigquery(),
+  project = bq_project_name,
+  dataset = bq_dataset_name,
+)
 
 
 ```
 
-This provides a way to individually step through each column of a dataframe and examine its properties.
+This tool provides a way to individually step through each column of a dataframe and examine its properties.
 
 ```{r column_stepping}
 
-
-
 # Settings
-tbl <- f_5500_sf_2018_latest
+f_5500_sf_2018_latest <- tbl(con, "f_5500_1999")
+dbplyr_tbl <- f_5500_sf_2018_latest
 
-# cols <- colnames(tbl)[ends_with("_IND", vars=colnames(tbl))]
-# cols <- colnames(tbl)[ends_with("_DATE", vars=colnames(tbl))]
-cols <- colnames(tbl)[ends_with("_AMT", vars=colnames(tbl))]
-# cols_done <- colnames(tbl)[ends_with("_IND", vars=colnames(tbl))]
-# cols <- setdiff(colnames(tbl),cols_done)
+# cols <- colnames(dbplyr_tbl)[ends_with("_IND", vars=colnames(dbplyr_tbl))]
+# cols <- colnames(dbplyr_tbl)[ends_with("_DATE", vars=colnames(dbplyr_tbl))]
+cols <- colnames(dbplyr_tbl)[ends_with("_AMT", vars=colnames(dbplyr_tbl))]
+# cols_done <- colnames(dbplyr_tbl)[ends_with("_IND", vars=colnames(dbplyr_tbl))]
+# cols <- setdiff(colnames(dbplyr_tbl),cols_done)
 
 
 col_selector <- function (table, col_name) {
@@ -64,7 +73,7 @@ col_selector <- function (table, col_name) {
 step_gen <- function (index=1) {
    function (.funs) {
       col_name <- cols[index]
-      cur_col <- tbl %>% col_selector(col_name)
+      cur_col <- dbplyr_tbl %>% col_selector(col_name)
       for (fun in .funs) {
          fun(cur_col) %>% print
       }
@@ -82,7 +91,6 @@ next_step <- step_gen(1)
 # next_step(list(diagnose,unique))
 next_step(list(function (x) summary(hablar::convert(x, num(1))), diagnose,unique))
 
-# ?hablar::convert(num(1))
 
 ```
 
